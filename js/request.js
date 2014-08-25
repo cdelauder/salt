@@ -33,7 +33,10 @@ var HttpsCreditCardService = (function() {
       request.open('post', service.getUrl(), true)
       request.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded')
       request.setRequestHeader('Origin', 'https://example.com')
-      console.log(request.send())
+      var requestCode = "singlePerchase"
+      var data = service.constructData(orderId, creditCard, amount, verificationRequest, requestCode)
+      console.log(data)
+      console.log(request.send(new FormData(data)))
       return request
     },
     requestListener: function() {
@@ -41,6 +44,30 @@ var HttpsCreditCardService = (function() {
     },
     getUrl: function() {
       return this.attribute.url
+    },
+    constructData: function(orderId, creditCard, amount, verificationRequest, requestCode) {
+      var data = {}
+      data.requestCode = requestCode
+      data.merchantId = service.attribute.merchantId
+      data.apiToken = service.attribute.apiToken
+      data.marketSegmentCode = "I"
+      data.orderId = orderId
+      data.creditCardNumber = creditCard.cardNumber
+      data.expiryDate = creditCard.expiryDate
+      data.cvv2 = creditCard.cvv2
+      data.street = creditCard.street
+      data.zip = creditCard.zip
+      data.amount = amount
+      data.avsRequestCode = verificationRequest.avsRequest
+      data.cvv2RequestCode = verificationRequest.cvv2Request
+      return service.makeQueryString(data)
+    },
+    makeQueryString: function(data) {
+      var query = ""
+      for (var key in data) {
+        query += key + '=' + data[key] + '&'
+      }
+      return query.slice(0, -1)
     }
   }
 
