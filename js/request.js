@@ -1,5 +1,10 @@
 var HttpsCreditCardService = (function() {
 
+  function invalidRequest(message) {
+    this.name = 'invalidRequest'
+    this.message = message || "bad avsRequest"
+  }
+
   var service = {
     set : function(merchantId, apiToken, url) {
       this.attribute = {}
@@ -9,15 +14,49 @@ var HttpsCreditCardService = (function() {
     },
     get: function() {
       return this.attribute
+    },
+    checkForValidEntries: function(crediCardSpecifier, orderId) {
+      var errors = []
+      if (!crediCardSpecifier) {
+        errors.push(invalidRequest("creditcard or storageTokenId is required"))
+      } 
+      if (!orderId) {
+        errors.push(invalidRequest("orderId is required"))
+      }
+      if (errors.length > 0) {
+        return errors
+      }
+    },
+    makeRequest: function(orderId, creditCard, amount, verificationRequest) {
+      var request = new XMLHttpRequest()
+      request.onload = service.requestListener()
+      request.open('post', service.getUrl(), true)
+      request.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded')
+      request.setRequestHeader('Origin', 'https://example.com')
+      console.log(request.send())
+      return request
+    },
+    requestListener: function() {
+      return this.responseText
+    },
+    getUrl: function() {
+      return this.attribute.url
     }
-
   }
 
 
   return {
     new : function(merchantId, apiToken, url) {
       service.set(merchantId, apiToken, url)
-      return service.get()
+      this.attributes = service.get()
+      return this
+    },
+    singlePurchase: function(orderId, creditCard, amount, verificationRequest) {
+      var error = service.checkForValidEntries(creditCard, orderId)
+      if (error) {
+        return error
+      }
+      return service.makeRequest(orderId, creditCard, amount, verificationRequest)
     }
   }
 } ())
@@ -82,6 +121,8 @@ var url = "https://test.salt.com/gateway/creditcard/processor.do"
 var service = HttpsCreditCardService.new(merchantId, apiToken, url)
 var card = CreditCard.new("4242424242424242", "1010", "111", "123 Street", "A1B2C3")
 var vr = VerificationRequest.new($AVS_VERIFY_STREET_AND_ZIP, $CVV2_PRESENT)
+var receipt = service.singlePurchase("order-126", card, "200", vr)
 console.log(service)
 console.log(card)
 console.log(vr)
+console.log(receipt)
